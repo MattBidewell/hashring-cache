@@ -22,7 +22,10 @@ const state = {
   key: "user:123",
   nodeCounter: 4,
   history: [],
+  transition: null,
 };
+
+let transitionTimer = null;
 
 const sampleKeys = Array.from({ length: SAMPLE_KEY_COUNT }, (_, index) => `sample-key-${index}`);
 
@@ -36,6 +39,7 @@ const elements = {
   historyList: document.querySelector("#history-list"),
   ownershipList: document.querySelector("#ownership-list"),
   changeBanner: document.querySelector("#change-banner"),
+  changeList: document.querySelector("#change-list"),
   randomNodeButton: document.querySelector("#random-node-button"),
   topStats: document.querySelector("#top-stats"),
   ringSvg: document.querySelector("#ring-svg"),
@@ -161,12 +165,17 @@ function removeNode(nodeId) {
 }
 
 function applyRingChange(action, mutate) {
+  const beforeSnapshot = state.ring.snapshot();
   const beforeAssignments = captureAssignments();
   const beforeOwner = state.ring.getNode(state.key)?.id ?? null;
   const summary = mutate();
+  const afterSnapshot = state.ring.snapshot();
   const afterAssignments = captureAssignments();
   const afterOwner = state.ring.getNode(state.key)?.id ?? null;
   const diff = diffAssignments(beforeAssignments, afterAssignments);
+  const transition = createTransition(beforeSnapshot, afterSnapshot);
+
+  setTransition(transition);
 
   pushHistory({
     action,
@@ -224,6 +233,7 @@ function render() {
   renderHistory();
   renderOwnership(snapshot, ownership);
   renderBanner();
+  renderChangeList();
   renderRing(snapshot);
   renderHashStrip(snapshot, ownership);
 }
@@ -359,10 +369,33 @@ function renderOwnership(snapshot, ownership) {
 
 function renderBanner() {
   const latest = state.history[0];
+  const transitionCopy = state.transition
+    ? `<p class="caption" style="margin-top:0.55rem;">${state.transition.changedIntervals.length} ownership ranges changed. The thin strip above the main bar shows who used to own those ranges.</p>`
+    : "";
 
   elements.changeBanner.innerHTML = latest
-    ? `<strong>${latest.action}</strong><p>${latest.summary}</p><p class="caption" style="margin-top:0.55rem;">${latest.ownerShift}</p>`
+    ? `<strong>${latest.action}</strong><p>${latest.summary}</p><p class="caption" style="margin-top:0.55rem;">${latest.ownerShift}</p>${transitionCopy}`
     : "<strong>Ready</strong><p>Start by adding a node to the ring.</p>";
+}
+
+function renderChangeList() {
+  if (!state.transition || state.transition.changedIntervals.length === 0) {
+    elements.changeList.innerHTML = "";
+    return;
+  }
+
+  elements.changeList.innerHTML = state.transition.changedIntervals
+    .slice(0, 5)
+    .map((interval) => {
+      const percentage = ((interval.end - interval.start) * 100).toFixed(2);
+      return `
+        <article class="change-chip">
+          <strong>${interval.beforeOwner ?? "none"} -> ${interval.afterOwner ?? "none"}</strong>
+          <p class="caption">${percentage}% of the hash space changed owner in this interval.</p>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 function renderRing(snapshot) {
@@ -371,6 +404,8 @@ function renderRing(snapshot) {
 
   const center = 450;
   const segmentRadius = 246;
+  const previousRadius = 286;
+  const highlightRadius = 262;
   const vnodeRadius = 292;
   const pointerRadius = 330;
   const owner = state.ring.getNode(state.key);
@@ -419,6 +454,34 @@ function renderRing(snapshot) {
         opacity,
       ),
     );
+  }
+
+  if (state.transition) {
+    for (const interval of state.transition.changedIntervals) {
+      append(
+        svg,
+        createPath(
+          describeArc(center, center, previousRadius, interval.start, interval.end),
+          "none",
+          colorForNode(interval.beforeOwner) ?? "rgba(27,36,48,0.35)",
+          8,
+          0.5,
+          "interval-before",
+          "10 10",
+        ),
+      );
+      append(
+        svg,
+        createPath(
+          describeArc(center, center, highlightRadius, interval.start, interval.end),
+          "none",
+          colorForNode(interval.afterOwner) ?? "#d6a141",
+          6,
+          0.95,
+          "interval-after",
+        ),
+      );
+    }
   }
 
   for (const entry of snapshot.entries) {
@@ -480,8 +543,10 @@ function renderRing(snapshot) {
     svg,
     createText(
       center,
-      86,
-      "Outer ring = virtual node points. Inner band = ownership ranges between points.",
+      58,
+      state.transition
+        ? "Thin dashed arcs show who used to own each remapped range. The bright trim marks where the current ring changed."
+        : "Outer dots = virtual node points. Inner band = ownership ranges between points.",
       "middle",
       18,
       "#5e655d",
@@ -496,31 +561,38 @@ function renderHashStrip(snapshot, ownership) {
   const startX = 70;
   const endX = 830;
   const width = endX - startX;
-  const topY = 54;
-  const height = 44;
   const keyRatio = fnv1a(state.key) / MAX_HASH;
   const ownerId = state.ring.getNode(state.key)?.id ?? null;
+  const barY = 92;
+  const barHeight = 42;
+  const ghostY = 56;
+  const ghostHeight = 14;
 
   append(svg, createText(startX, 30, "0", "start", 14, "#5e655d"));
   append(svg, createText(endX, 30, String(MAX_HASH), "end", 14, "#5e655d"));
 
-  const frame = document.createElementNS(SVG_NS, "rect");
-  frame.setAttribute("x", String(startX));
-  frame.setAttribute("y", String(topY));
-  frame.setAttribute("width", String(width));
-  frame.setAttribute("height", String(height));
-  frame.setAttribute("rx", "18");
-  frame.setAttribute("fill", "rgba(255,255,255,0.72)");
-  frame.setAttribute("stroke", "rgba(27,36,48,0.1)");
-  append(svg, frame);
-
   if (snapshot.entries.length === 0) {
     append(
       svg,
-      createText(450, 112, "Add a node to populate the hash space.", "middle", 18, "#5e655d"),
+      createText(450, 110, "Add a node to populate the hash space.", "middle", 18, "#5e655d"),
     );
     return;
   }
+
+  append(
+    svg,
+    createRect(
+      startX,
+      barY,
+      width,
+      barHeight,
+      "rgba(255,255,255,0.72)",
+      "rgba(27,36,48,0.1)",
+      1,
+      "",
+      16,
+    ),
+  );
 
   for (let index = 0; index < snapshot.entries.length; index += 1) {
     const current = snapshot.entries[index];
@@ -528,40 +600,10 @@ function renderHashStrip(snapshot, ownership) {
       snapshot.entries[(index - 1 + snapshot.entries.length) % snapshot.entries.length];
     const startRatio = previous.position / MAX_HASH;
     const endRatio = current.position / MAX_HASH;
-    const segmentStart = startX + startRatio * width;
-    const node = state.nodes.find((entry) => entry.id === current.nodeId);
-    const fill = node?.color ?? "#1d6b72";
-    const opacity = current.nodeId === ownerId ? "0.9" : "0.5";
+    const fill = colorForNode(current.nodeId) ?? "#1d6b72";
+    const opacity = current.nodeId === ownerId ? 0.92 : 0.56;
 
-    if (endRatio >= startRatio) {
-      const segment = document.createElementNS(SVG_NS, "rect");
-      segment.setAttribute("x", String(segmentStart));
-      segment.setAttribute("y", String(topY));
-      segment.setAttribute("width", String(Math.max((endRatio - startRatio) * width, 1.25)));
-      segment.setAttribute("height", String(height));
-      segment.setAttribute("fill", fill);
-      segment.setAttribute("opacity", opacity);
-      append(svg, segment);
-      continue;
-    }
-
-    const rightSegment = document.createElementNS(SVG_NS, "rect");
-    rightSegment.setAttribute("x", String(segmentStart));
-    rightSegment.setAttribute("y", String(topY));
-    rightSegment.setAttribute("width", String(Math.max(endX - segmentStart, 1.25)));
-    rightSegment.setAttribute("height", String(height));
-    rightSegment.setAttribute("fill", fill);
-    rightSegment.setAttribute("opacity", opacity);
-    append(svg, rightSegment);
-
-    const leftSegment = document.createElementNS(SVG_NS, "rect");
-    leftSegment.setAttribute("x", String(startX));
-    leftSegment.setAttribute("y", String(topY));
-    leftSegment.setAttribute("width", String(Math.max(endRatio * width, 1.25)));
-    leftSegment.setAttribute("height", String(height));
-    leftSegment.setAttribute("fill", fill);
-    leftSegment.setAttribute("opacity", opacity);
-    append(svg, leftSegment);
+    appendWrappedRect(svg, startX, barY, width, barHeight, startRatio, endRatio, fill, opacity);
   }
 
   for (const entry of snapshot.entries) {
@@ -570,34 +612,80 @@ function renderHashStrip(snapshot, ownership) {
     const tick = document.createElementNS(SVG_NS, "line");
     tick.setAttribute("x1", String(x));
     tick.setAttribute("x2", String(x));
-    tick.setAttribute("y1", String(topY - 10));
-    tick.setAttribute("y2", String(topY + height + 10));
-    tick.setAttribute("stroke", "rgba(27,36,48,0.25)");
+    tick.setAttribute("y1", String(barY - 7));
+    tick.setAttribute("y2", String(barY + barHeight + 7));
+    tick.setAttribute("stroke", "rgba(27,36,48,0.18)");
     tick.setAttribute("stroke-width", "1");
     append(svg, tick);
+  }
+
+  if (state.transition) {
+    append(
+      svg,
+      createText(
+        startX,
+        ghostY - 8,
+        "Previous owners of remapped intervals",
+        "start",
+        12,
+        "#5e655d",
+      ),
+    );
+
+    for (const interval of state.transition.changedIntervals) {
+      appendWrappedRect(
+        svg,
+        startX,
+        ghostY,
+        width,
+        ghostHeight,
+        interval.start,
+        interval.end,
+        colorForNode(interval.beforeOwner) ?? "rgba(27,36,48,0.25)",
+        0.6,
+        "rgba(27,36,48,0.06)",
+        1,
+        "interval-before",
+      );
+
+      appendWrappedRect(
+        svg,
+        startX,
+        barY - 6,
+        width,
+        barHeight + 12,
+        interval.start,
+        interval.end,
+        "rgba(0,0,0,0)",
+        1,
+        colorForNode(interval.afterOwner) ?? "#d6a141",
+        3,
+        "interval-after",
+      );
+    }
   }
 
   const keyX = startX + keyRatio * width;
   const keyMarker = document.createElementNS(SVG_NS, "line");
   keyMarker.setAttribute("x1", String(keyX));
   keyMarker.setAttribute("x2", String(keyX));
-  keyMarker.setAttribute("y1", String(topY - 22));
-  keyMarker.setAttribute("y2", String(topY + height + 26));
+  keyMarker.setAttribute("y1", String(ghostY - 18));
+  keyMarker.setAttribute("y2", String(barY + barHeight + 16));
   keyMarker.setAttribute("stroke", "#1b2430");
-  keyMarker.setAttribute("stroke-width", "3");
+  keyMarker.setAttribute("stroke-width", "2");
   append(svg, keyMarker);
 
-  append(svg, createText(keyX, topY - 28, state.key, "middle", 15, "#1b2430"));
+  append(svg, createText(keyX, ghostY - 24, state.key, "middle", 14, "#1b2430"));
 
   let legendX = startX;
   for (const node of state.nodes) {
     const share = ownership.get(node.id) ?? 0;
-    append(svg, createCircle(legendX, 140, 6, node.color, "none"));
+    append(svg, createCircle(legendX, 182, 6, node.color, "none"));
     append(
       svg,
       createText(
         legendX + 12,
-        145,
+        187,
         `${node.id} ${(share * 100).toFixed(1)}%`,
         "start",
         14,
@@ -606,6 +694,97 @@ function renderHashStrip(snapshot, ownership) {
     );
     legendX += 160;
   }
+}
+
+function setTransition(transition) {
+  state.transition = transition;
+
+  if (transitionTimer) {
+    clearTimeout(transitionTimer);
+  }
+
+  transitionTimer = setTimeout(() => {
+    state.transition = null;
+    render();
+  }, 4500);
+}
+
+function createTransition(beforeSnapshot, afterSnapshot) {
+  const boundaries = new Set([0, 1]);
+
+  for (const entry of beforeSnapshot.entries) {
+    boundaries.add(entry.position / MAX_HASH);
+  }
+
+  for (const entry of afterSnapshot.entries) {
+    boundaries.add(entry.position / MAX_HASH);
+  }
+
+  const sortedBoundaries = Array.from(boundaries).sort((left, right) => left - right);
+  const changedIntervals = [];
+
+  for (let index = 0; index < sortedBoundaries.length - 1; index += 1) {
+    const start = sortedBoundaries[index];
+    const end = sortedBoundaries[index + 1];
+
+    if (end - start <= 0) {
+      continue;
+    }
+
+    const probe = start + (end - start) / 2;
+    const beforeOwner = ownerAtRatio(beforeSnapshot, probe);
+    const afterOwner = ownerAtRatio(afterSnapshot, probe);
+
+    if (beforeOwner !== afterOwner) {
+      const previous = changedIntervals[changedIntervals.length - 1];
+
+      if (
+        previous &&
+        previous.end === start &&
+        previous.beforeOwner === beforeOwner &&
+        previous.afterOwner === afterOwner
+      ) {
+        previous.end = end;
+      } else {
+        changedIntervals.push({ start, end, beforeOwner, afterOwner });
+      }
+    }
+  }
+
+  return {
+    beforeSnapshot,
+    afterSnapshot,
+    changedIntervals,
+    nodeColors: new Map(
+      [...beforeSnapshot.nodes, ...afterSnapshot.nodes].map((node) => [
+        node.nodeId,
+        node.node.color,
+      ]),
+    ),
+  };
+}
+
+function ownerAtRatio(snapshot, ratio) {
+  if (snapshot.entries.length === 0) {
+    return null;
+  }
+
+  const target = ratio * MAX_HASH;
+
+  for (const entry of snapshot.entries) {
+    if (entry.position >= target) {
+      return entry.nodeId;
+    }
+  }
+
+  return snapshot.entries[0]?.nodeId ?? null;
+}
+
+function colorForNode(nodeId) {
+  return (
+    state.nodes.find((node) => node.id === nodeId)?.color ??
+    state.transition?.nodeColors.get(nodeId)
+  );
 }
 
 function computeOwnership(snapshot) {
@@ -654,7 +833,50 @@ function describeArc(cx, cy, radius, start, end) {
   return `M ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endPoint.x} ${endPoint.y}`;
 }
 
-function createCircle(cx, cy, radius, fill, stroke, strokeWidth = 0) {
+function appendWrappedRect(
+  svg,
+  startX,
+  y,
+  width,
+  height,
+  startRatio,
+  endRatio,
+  fill,
+  opacity,
+  stroke = "none",
+  strokeWidth = 0,
+  className = "",
+) {
+  const appendSegment = (segmentX, segmentWidth) => {
+    append(
+      svg,
+      createRect(
+        segmentX,
+        y,
+        Math.max(segmentWidth, 1.25),
+        height,
+        fill,
+        stroke,
+        strokeWidth,
+        className,
+        10,
+        opacity,
+      ),
+    );
+  };
+
+  const segmentStart = startX + startRatio * width;
+
+  if (endRatio >= startRatio) {
+    appendSegment(segmentStart, (endRatio - startRatio) * width);
+    return;
+  }
+
+  appendSegment(segmentStart, startX + width - segmentStart);
+  appendSegment(startX, endRatio * width);
+}
+
+function createCircle(cx, cy, radius, fill, stroke, strokeWidth = 0, className = "") {
   const circle = document.createElementNS(SVG_NS, "circle");
   circle.setAttribute("cx", String(cx));
   circle.setAttribute("cy", String(cy));
@@ -662,10 +884,15 @@ function createCircle(cx, cy, radius, fill, stroke, strokeWidth = 0) {
   circle.setAttribute("fill", fill);
   circle.setAttribute("stroke", stroke);
   circle.setAttribute("stroke-width", String(strokeWidth));
+
+  if (className) {
+    circle.setAttribute("class", className);
+  }
+
   return circle;
 }
 
-function createPath(d, fill, stroke, strokeWidth, opacity = 1) {
+function createPath(d, fill, stroke, strokeWidth, opacity = 1, className = "", dasharray = "") {
   const path = document.createElementNS(SVG_NS, "path");
   path.setAttribute("d", d);
   path.setAttribute("fill", fill);
@@ -673,10 +900,52 @@ function createPath(d, fill, stroke, strokeWidth, opacity = 1) {
   path.setAttribute("stroke-width", String(strokeWidth));
   path.setAttribute("stroke-linecap", "round");
   path.setAttribute("opacity", String(opacity));
+
+  if (className) {
+    path.setAttribute("class", className);
+  }
+
+  if (dasharray) {
+    path.setAttribute("stroke-dasharray", dasharray);
+  }
+
   return path;
 }
 
-function createText(x, y, text, anchor, fontSize, fill) {
+function createRect(
+  x,
+  y,
+  width,
+  height,
+  fill,
+  stroke,
+  strokeWidth,
+  className = "",
+  radius = 0,
+  opacity = 1,
+) {
+  const rect = document.createElementNS(SVG_NS, "rect");
+  rect.setAttribute("x", String(x));
+  rect.setAttribute("y", String(y));
+  rect.setAttribute("width", String(width));
+  rect.setAttribute("height", String(height));
+  rect.setAttribute("fill", fill);
+  rect.setAttribute("stroke", stroke);
+  rect.setAttribute("stroke-width", String(strokeWidth));
+  rect.setAttribute("opacity", String(opacity));
+
+  if (radius > 0) {
+    rect.setAttribute("rx", String(radius));
+  }
+
+  if (className) {
+    rect.setAttribute("class", className);
+  }
+
+  return rect;
+}
+
+function createText(x, y, text, anchor, fontSize, fill, className = "") {
   const element = document.createElementNS(SVG_NS, "text");
   element.setAttribute("x", String(x));
   element.setAttribute("y", String(y));
@@ -687,6 +956,11 @@ function createText(x, y, text, anchor, fontSize, fill) {
     "font-family",
     '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   );
+
+  if (className) {
+    element.setAttribute("class", className);
+  }
+
   element.textContent = text;
   return element;
 }
