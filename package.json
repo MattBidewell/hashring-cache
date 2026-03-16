@@ -1,0 +1,21 @@
+{
+  "name": "hashring-cache",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.6.0",
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "bench": "pnpm -r --if-present bench",
+    "example:basic": "pnpm build && node example/basic.mjs",
+    "example:viz": "pnpm build && node scripts/serve-static.mjs",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "check": "pnpm lint && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
+  }
+}
