@@ -30,6 +30,8 @@ pnpm example:viz
 
 Then open `http://127.0.0.1:4173/example/`.
 
+The visualizer is fully static and self-contained in `example/`, so it can be hosted directly on GitHub Pages without building package output first.
+
 To generate a GitHub Pages-friendly static site in `docs/`:
 
 ```bash

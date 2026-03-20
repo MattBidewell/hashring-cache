@@ -5,16 +5,12 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const docsDir = path.join(root, "docs");
 const docsExampleDir = path.join(docsDir, "example");
-const docsPackageDir = path.join(docsDir, "packages", "consistent-hash", "dist");
 const exampleDir = path.join(root, "example");
-const packageDistDir = path.join(root, "packages", "consistent-hash", "dist");
 
 await rm(docsDir, { recursive: true, force: true });
 await mkdir(docsExampleDir, { recursive: true });
-await mkdir(docsPackageDir, { recursive: true });
 
 await cp(exampleDir, docsExampleDir, { recursive: true });
-await cp(packageDistDir, docsPackageDir, { recursive: true });
 
 await writeFile(path.join(docsDir, "index.html"), buildRedirectPage("./example/"), "utf8");
 await writeFile(path.join(docsDir, ".nojekyll"), "", "utf8");

@@ -1,4 +1,4 @@
-import { HashRing, fnv1a } from "../packages/consistent-hash/dist/src/index.js";
+import { HashRing, fnv1a } from "./consistent-hash.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MAX_HASH = 0xffffffff;
