@@ -25,10 +25,18 @@ pnpm example:basic
 For the interactive ring visualizer:
 
 ```bash
-pnpm example:vix
+pnpm example:viz
 ```
 
 Then open `http://127.0.0.1:4173/example/`.
+
+To generate a GitHub Pages-friendly static site in `docs/`:
+
+```bash
+pnpm build:pages
+```
+
+Then publish the `docs/` folder with GitHub Pages and open `/example/` on the published site.
 
 ## Description
 
