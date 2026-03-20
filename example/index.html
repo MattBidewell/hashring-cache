@@ -247,6 +247,32 @@
       .node-item {
         display: grid;
         gap: 0.55rem;
+        transition:
+          transform 180ms ease,
+          border-color 180ms ease,
+          background 180ms ease,
+          box-shadow 220ms ease;
+      }
+
+      .node-item.selectable {
+        cursor: pointer;
+      }
+
+      .node-item.selectable:hover {
+        transform: translateY(-2px);
+        border-color: rgba(29, 107, 114, 0.2);
+      }
+
+      .node-item.selectable:focus-visible {
+        outline: 2px solid rgba(29, 107, 114, 0.24);
+        outline-offset: 3px;
+      }
+
+      .node-item.selected,
+      .replica-item.selected {
+        background: linear-gradient(135deg, rgba(29, 107, 114, 0.14), rgba(255, 255, 255, 0.88));
+        border-color: rgba(29, 107, 114, 0.34);
+        box-shadow: 0 18px 32px rgba(29, 107, 114, 0.12);
       }
 
       .node-top,
@@ -272,6 +298,13 @@
         border-radius: 999px;
         display: inline-block;
         box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55);
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .node-item.selected .swatch,
+      .replica-item.selected .swatch {
+        transform: scale(1.28);
+        box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.7);
       }
 
       .pill-row {
@@ -286,6 +319,11 @@
         background: var(--accent-soft);
         color: var(--accent);
         font-size: 0.8rem;
+      }
+
+      .pill-active {
+        background: linear-gradient(135deg, rgba(29, 107, 114, 0.2), rgba(29, 107, 114, 0.12));
+        box-shadow: inset 0 0 0 1px rgba(29, 107, 114, 0.14);
       }
 
       .hero {
@@ -367,6 +405,43 @@
         color: var(--muted);
       }
 
+      .viz-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        align-items: center;
+        margin-top: 0.85rem;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .viz-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+
+      .legend-line {
+        width: 2.2rem;
+        height: 0;
+        border-top: 6px solid rgba(29, 107, 114, 0.9);
+        border-radius: 999px;
+      }
+
+      .legend-line.previous {
+        border-top-width: 4px;
+        border-top-style: dashed;
+        border-top-color: rgba(27, 36, 48, 0.45);
+      }
+
+      .legend-dot {
+        width: 0.85rem;
+        height: 0.85rem;
+        border-radius: 999px;
+        background: rgba(29, 107, 114, 0.9);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.72);
+      }
+
       .change-list {
         display: grid;
         gap: 0.6rem;
@@ -392,6 +467,32 @@
         animation: settle-emerge 1100ms cubic-bezier(0.22, 1, 0.36, 1) 1;
       }
 
+      .ring-before-ghost {
+        animation: ring-before-fade 1500ms ease-out 1;
+      }
+
+      .ring-after-settle {
+        animation: ring-after-settle 1200ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+      }
+
+      .transition-entering-point {
+        animation: vnode-bloom 900ms cubic-bezier(0.16, 1, 0.3, 1) 1;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+
+      .transition-exiting-point {
+        animation: vnode-fade 850ms ease-out 1;
+      }
+
+      .transition-focus-band {
+        animation: focus-band-pulse 1600ms ease-out 1;
+      }
+
+      .selection-outline {
+        animation: selection-settle 280ms ease-out 1;
+      }
+
       @keyframes settle-fade {
         0% {
           opacity: 0;
@@ -411,6 +512,83 @@
         100% {
           opacity: 1;
           transform: translateY(0);
+        }
+      }
+
+      @keyframes ring-before-fade {
+        0% {
+          opacity: 0.55;
+        }
+
+        100% {
+          opacity: 0.12;
+        }
+      }
+
+      @keyframes ring-after-settle {
+        0% {
+          opacity: 0;
+        }
+
+        60% {
+          opacity: 1;
+        }
+
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @keyframes vnode-bloom {
+        0% {
+          opacity: 0;
+          transform: scale(0.3);
+        }
+
+        70% {
+          opacity: 1;
+          transform: scale(1.22);
+        }
+
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes vnode-fade {
+        0% {
+          opacity: 0.65;
+          transform: scale(1);
+        }
+
+        100% {
+          opacity: 0;
+          transform: scale(0.6);
+        }
+      }
+
+      @keyframes focus-band-pulse {
+        0% {
+          opacity: 0;
+        }
+
+        35% {
+          opacity: 1;
+        }
+
+        100% {
+          opacity: 0.88;
+        }
+      }
+
+      @keyframes selection-settle {
+        0% {
+          opacity: 0;
+        }
+
+        100% {
+          opacity: 1;
         }
       }
 
@@ -457,11 +635,10 @@
     <div class="shell">
       <aside class="sidebar panel">
         <section>
-          <p class="eyebrow">Milestone 1</p>
           <h1>Watch the ring rebalance.</h1>
           <p class="lede">
-            Add or remove cache nodes and see which virtual nodes claim the circle, where a key
-            lands, and how many sample keys get remapped.
+            Add or remove cache nodes and see where virtual nodes land on the circle, which node a
+            key maps to, and how many of 512 sample keys get remapped.
           </p>
         </section>
 
@@ -488,13 +665,17 @@
         <section class="card stack">
           <div class="card-head">
             <h2>Probe key</h2>
-            <span class="subtle">clockwise lookup</span>
+            <span class="subtle">owner plus next distinct nodes</span>
           </div>
           <label>
             Cache key
             <input id="probe-key" value="user:123" />
           </label>
-          <div class="replica-list" id="replica-list"></div>
+            <div class="replica-list" id="replica-list"></div>
+            <p class="caption">
+              The first result is the current owner. The rest are the next distinct physical nodes
+              encountered clockwise on the ring.
+            </p>
         </section>
 
         <section class="card stack">
@@ -505,13 +686,6 @@
           <div class="node-list" id="node-list"></div>
         </section>
 
-        <section class="card stack">
-          <div class="card-head">
-            <h2>Operation log</h2>
-            <span class="subtle">sample set of 512 keys</span>
-          </div>
-          <div class="history-list" id="history-list"></div>
-        </section>
       </aside>
 
       <main class="canvas panel">
@@ -522,8 +696,8 @@
               <h2>Ring state</h2>
             </div>
             <p class="caption">
-              Outer dots are deterministic virtual nodes. The colored band between two dots belongs
-              to the next dot clockwise. The diamond marks the current key.
+              Outer dots are deterministic virtual nodes. Each colored band shows the interval owned
+              by the virtual node at its clockwise end. The diamond marks the current key hash.
             </p>
           </div>
         </section>
@@ -534,6 +708,11 @@
               <div class="ring-stage">
                 <svg id="ring-svg" viewBox="0 0 900 900" aria-label="Hash ring visualization"></svg>
               </div>
+              <div class="viz-legend">
+                <span class="viz-legend-item"><span class="legend-dot"></span>virtual node point</span>
+                <span class="viz-legend-item"><span class="legend-line"></span>current owner</span>
+                <span class="viz-legend-item"><span class="legend-line previous"></span>previous owner for changed range</span>
+              </div>
               <div class="strip-stage">
                 <div class="card-head">
                   <h3>Linear hash space</h3>
@@ -541,11 +720,12 @@
                 </div>
                 <svg id="strip-svg" viewBox="0 0 900 220" aria-label="Linear hash space visualization"></svg>
                 <p class="caption">
-                  Left is hash `0`, right is `2^32 - 1`. The bar shows the current ownership map.
+                  Left is hash `0`, right is `2^32 - 1`. The bar shows the current ownership map,
+                  with wraparound from the right edge back to the left.
                 </p>
                 <p class="caption">
                   During a change, the thin strip above the bar shows the old owner for each remapped
-                  interval, and the highlighted section in the main bar shows the new owner.
+                  interval, and the highlighted outline in the main bar shows the new owner.
                 </p>
               </div>
             </div>
@@ -563,11 +743,24 @@
                 </p>
                 <p class="subtle">
                   Adding weight creates more virtual nodes for that physical node. Removing a node
-                  deletes only its points, so only its neighboring ranges move.
+                  deletes only its points, so each scattered interval it owned moves to the next
+                  surviving point clockwise.
                 </p>
                 <p class="subtle">
                   In the ring animation, the thin dashed guide shows the previous owner only for the
-                  ranges that changed; the main ring stays focused on the new state.
+                  intervals that changed; the main ring stays focused on the new state.
+                </p>
+                <p class="subtle">
+                  The node color is consistent everywhere: dots, ring slices, and strip segments all
+                  use the same color for the same node.
+                </p>
+                <p class="subtle">
+                  This demo uses 24 base virtual nodes per weight unit so the ring stays readable.
+                  Production systems often use more, which usually smooths out the ownership split.
+                </p>
+                <p class="subtle">
+                  Remap counts are sampled from 512 demo keys, so they show the trend rather than an
+                  exact percentage of all possible keys.
                 </p>
               </div>
               <div class="card stack">
@@ -582,6 +775,6 @@
       </main>
     </div>
 
-    <script type="module" src="./visualizer.js?v=2"></script>
+    <script type="module" src="./visualizer.js?v=5"></script>
   </body>
 </html>
