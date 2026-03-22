@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { HashRing } from "../src/index.js";
+import { HashRing } from "../../src/index.js";
 
 function captureAssignments(ring: HashRing<string>, totalKeys: number): string[] {
   const owners: string[] = [];
@@ -26,7 +26,7 @@ function remapRatio(before: string[], after: string[]): number {
 
 describe("remapping", () => {
   test("moves a bounded fraction of keys when adding a node", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 150 });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 150 });
 
     for (let index = 0; index < 5; index += 1) {
       ring.addNode("node-" + index);
@@ -44,7 +44,7 @@ describe("remapping", () => {
   });
 
   test("mostly remaps keys owned by a removed node", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 150 });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 150 });
 
     for (let index = 0; index < 6; index += 1) {
       ring.addNode("node-" + index);

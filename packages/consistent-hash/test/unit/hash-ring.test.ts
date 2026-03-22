@@ -1,33 +1,33 @@
 import { describe, expect, test } from "vitest";
 
-import { HashRing } from "../src/index.js";
+import { HashRing } from "../../src/index.js";
 
 describe("HashRing", () => {
   test("returns undefined when the ring is empty", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node });
 
     expect(ring.getNode("alpha")).toBeUndefined();
     expect(ring.getNodes("alpha", 3)).toEqual([]);
   });
 
   test("adds and removes nodes by stable node id", () => {
-    const ring = new HashRing<{ id: string }>({ getNodeId: (node) => node.id });
+    const ring = new HashRing<{ id: string }>({ nodeToKey: (node) => node.id });
     const nodeA = { id: "node-a" };
     const nodeB = { id: "node-b" };
 
     ring.addNode(nodeA);
     ring.addNode(nodeB);
 
-    expect(ring.size()).toBe(2);
-    expect(ring.nodes()).toEqual([nodeA, nodeB]);
+    expect(ring.size).toBe(2);
+    expect(ring.nodes).toEqual([nodeA, nodeB]);
 
     expect(ring.removeNode({ id: "node-a" })).toBe(true);
-    expect(ring.size()).toBe(1);
-    expect(ring.nodes()).toEqual([nodeB]);
+    expect(ring.size).toBe(1);
+    expect(ring.nodes).toEqual([nodeB]);
   });
 
   test("returns distinct nodes for replica selection", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 50 });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 50 });
 
     ring.addNode("node-a");
     ring.addNode("node-b");
@@ -40,7 +40,7 @@ describe("HashRing", () => {
   });
 
   test("honors node weights over many lookups", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 150 });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 150 });
 
     ring.addNode("small", 1);
     ring.addNode("large", 3);
@@ -62,16 +62,16 @@ describe("HashRing", () => {
   });
 
   test("validates virtualNodes and weight values", () => {
-    expect(() => new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 0 })).toThrow();
+    expect(() => new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 0 })).toThrow();
 
-    const ring = new HashRing<string>({ getNodeId: (node) => node });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node });
 
     expect(() => ring.addNode("node-a", 0)).toThrow();
     expect(() => ring.addNode("node-a", Number.NaN)).toThrow();
   });
 
   test("exposes a snapshot for debugging and visualization", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 10 });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 10 });
 
     ring.addNode("node-a");
     ring.addNode("node-b", 2);
@@ -87,5 +87,39 @@ describe("HashRing", () => {
     ]);
     expect(snapshot.entries).toHaveLength(30);
     expect(snapshot.entries[0]?.position).toBeLessThanOrEqual(snapshot.entries[29]?.position ?? 0);
+  });
+
+  test("uses the default replica count when count is omitted", () => {
+    const ring = new HashRing<string>({
+      nodeToKey: (node) => node,
+      virtualNodes: 50,
+      defaultReplicaCount: 2,
+    });
+
+    ring.addNode("node-a");
+    ring.addNode("node-b");
+    ring.addNode("node-c");
+
+    expect(ring.getNodes("replicated-key")).toHaveLength(2);
+  });
+
+  test("exposes distribution and key mapping helpers", () => {
+    const ring = new HashRing<{ id: string }>({
+      nodeToKey: (node) => node.id,
+      virtualNodes: 12,
+    });
+
+    ring.addNode({ id: "node-a" });
+    ring.addNode({ id: "node-b" }, 2);
+
+    const distribution = ring.getDistribution();
+    const keyMapping = ring.getKeyMapping(["alpha", "beta"]);
+
+    expect(ring.vnodeTotal).toBe(36);
+    expect(distribution).toHaveLength(2);
+    expect(distribution.reduce((total, node) => total + node.keyspaceShare, 0)).toBeCloseTo(1, 8);
+    expect(keyMapping).toHaveLength(2);
+    expect(keyMapping[0]?.key).toBe("alpha");
+    expect(keyMapping[0]?.nodeId).toBeDefined();
   });
 });

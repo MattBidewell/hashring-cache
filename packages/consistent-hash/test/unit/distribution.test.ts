@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { HashRing } from "../src/index.js";
+import { HashRing } from "../../src/index.js";
 
 function standardDeviation(values: number[]): number {
   const mean = values.reduce((total, value) => total + value, 0) / values.length;
@@ -11,7 +11,7 @@ function standardDeviation(values: number[]): number {
 
 describe("distribution", () => {
   test("spreads keys reasonably evenly across nodes", () => {
-    const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 150 });
+    const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 150 });
     const nodeCount = 8;
     const keyCount = 100_000;
 

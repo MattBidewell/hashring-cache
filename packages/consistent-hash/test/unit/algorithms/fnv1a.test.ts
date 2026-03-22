@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { fnv1a } from "./fnv1a.js";
+import { fnv1a } from "../../../src/algorithms/fnv1a.js";
 
 describe("fnv1a", () => {
   test("returns stable 32-bit hashes for known inputs", () => {
