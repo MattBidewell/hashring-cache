@@ -1,0 +1,10 @@
+{
+  "name": "consistent-hash-cf-do-example",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Cloudflare Workers + Durable Objects reference implementation for consistent-hash",
+  "type": "module",
+  "scripts": {
+    "lint": "biome check ."
+  }
+}

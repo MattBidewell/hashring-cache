@@ -4,18 +4,19 @@
   "type": "module",
   "packageManager": "pnpm@10.6.0",
   "scripts": {
-    "build": "pnpm -r --if-present build",
+    "build": "turbo run build",
     "build:pages": "node scripts/build-pages.mjs",
-    "test": "pnpm -r --if-present test",
-    "bench": "pnpm -r --if-present bench",
+    "test": "turbo run test",
+    "bench": "turbo run bench",
     "example:basic": "pnpm build && node example/basic.mjs",
     "example:viz": "node scripts/serve-static.mjs",
-    "lint": "biome check .",
+    "lint": "turbo run lint",
     "format": "biome check --write .",
     "check": "pnpm lint && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.5.3",
     "typescript": "^5.8.2",
     "vitest": "^3.1.1"
   }

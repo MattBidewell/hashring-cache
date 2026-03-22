@@ -1,10 +1,11 @@
 # hashring-cache
 
-A monorepo for a consistent hashing library and a distributed cache built on Cloudflare Workers + Durable Objects.
+A monorepo for a publishable consistent hashing library and a public Cloudflare Workers + Durable Objects reference implementation.
 
 ## Workspace
 
-- `packages/consistent-hash` - library package
+- `packages/consistent-hash` - zero-dependency library package published to npm
+- `packages/consistent-hash-cf-do-example` - cloneable Cloudflare Workers + Durable Objects reference implementation
 
 ## Getting Started
 
@@ -14,9 +15,15 @@ pnpm test
 pnpm build
 ```
 
-See `example/basic.ts` for a small end-to-end usage example.
+The repo uses pnpm workspaces and Turborepo to orchestrate package tasks.
 
-Run it with:
+## Current Packages
+
+### `consistent-hash`
+
+Portable TypeScript hash ring with virtual nodes, weighted nodes, pluggable hashing, and tests for lookup, distribution, and remapping behavior.
+
+See `example/basic.ts` for a small end-to-end usage example.
 
 ```bash
 pnpm example:basic
@@ -38,8 +45,8 @@ To generate a GitHub Pages-friendly static site in `docs/`:
 pnpm build:pages
 ```
 
-Then publish the `docs/` folder with GitHub Pages and open `/example/` on the published site.
+### `consistent-hash-cf-do-example`
 
-## Description
+Reference implementation package for the Worker routing layer, Durable Object storage partitions, Wrangler config, and Cloudflare integration tests.
 
-The first package is a zero-dependency TypeScript hash ring with virtual nodes, weighted nodes, pluggable hashing, and tests for lookup, distribution, and remapping behavior.
+This package is intended as a public example people clone and adapt rather than a package published to npm.
