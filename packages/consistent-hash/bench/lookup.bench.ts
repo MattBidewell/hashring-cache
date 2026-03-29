@@ -3,7 +3,7 @@ import { bench, describe } from "vitest";
 import { HashRing } from "../src/index.js";
 
 function createRing(nodeCount: number): HashRing<string> {
-  const ring = new HashRing<string>({ getNodeId: (node) => node, virtualNodes: 150 });
+  const ring = new HashRing<string>({ nodeToKey: (node) => node, virtualNodes: 150 });
 
   for (let index = 0; index < nodeCount; index += 1) {
     ring.addNode("node-" + index);

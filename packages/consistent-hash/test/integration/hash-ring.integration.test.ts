@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { fnv1a } from "../../src/index.js";
-
 import {
   BASELINE_NODES,
   type CacheNode,
@@ -26,25 +24,28 @@ describe("consistent-hash integration", () => {
 
   test("adds cache data and exposes stable lookup metadata", () => {
     const key = "user:123";
-    const owner = harness.ring.getNode(key);
-    const replicas = harness.ring.getNodes(key);
-    const snapshot = harness.ring.snapshot();
-    const distribution = harness.ring.getDistribution();
-    const mappings = harness.ring.getKeyMapping([key, "user:456", "user:789"]);
 
+    const owner = harness.ring.getNode(key);
     expect(owner).toBeDefined();
-    expect(typeof fnv1a(key)).toBe("number");
+
+    const replicas = harness.ring.getNodes(key);
     expect(replicas).toHaveLength(2);
     expect(new Set(replicas.map((node) => node.id)).size).toBe(2);
+
+    const snapshot = harness.ring.snapshot();
     expect(snapshot.virtualNodes).toBe(80);
     expect(snapshot.nodeCount).toBe(3);
     expect(snapshot.ringSize).toBe(320);
     expect(snapshot.nodes.map((entry) => entry.nodeId)).toEqual(
       BASELINE_NODES.map((node) => node.id),
     );
+
+    const distribution = harness.ring.getDistribution();
     expect(distribution).toHaveLength(3);
     expect(distribution.every((entry) => entry.keyspacePercentage > 0)).toBe(true);
     expect(distribution.reduce((total, entry) => total + entry.keyspaceShare, 0)).toBeCloseTo(1, 8);
+
+    const mappings = harness.ring.getKeyMapping([key, "user:456", "user:789"]);
     expect(mappings.every((entry) => entry.nodeId !== undefined)).toBe(true);
   });
 

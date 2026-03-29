@@ -1,14 +1,30 @@
 export type HashFunction = (input: string) => number;
 
 export interface HashRingOptions<T> {
-  getNodeId: (node: T) => string;
+  nodeToKey: (node: T) => string;
   hash?: HashFunction;
   virtualNodes?: number;
+  defaultReplicaCount?: number;
 }
 
 export interface WeightedNode<T> {
   node: T;
   weight: number;
+}
+
+export interface HashRingDistribution<T> {
+  nodeId: string;
+  node: T;
+  weight: number;
+  virtualNodeCount: number;
+  keyspaceShare: number;
+  keyspacePercentage: number;
+}
+
+export interface HashRingKeyMapping<T> {
+  key: string;
+  nodeId: string | undefined;
+  node: T | undefined;
 }
 
 export interface HashRingNodeSnapshot<T> {
