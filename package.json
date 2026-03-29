@@ -7,6 +7,7 @@
     "build": "turbo run build",
     "build:pages": "node scripts/build-pages.mjs",
     "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
     "bench": "turbo run bench",
     "example:basic": "pnpm build && node example/basic.mjs",
     "example:viz": "node scripts/serve-static.mjs",
